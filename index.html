@@ -52,6 +52,37 @@
   const worker = new Worker(workerFileName);
   new TtyServer(slave).start(worker);
 </script>
+<script>
+  const socket = new WebSocket('ws://localhost:6080/websockify');
+  const wasm = new WasmBrowserShim({
+      locateFile: (file) => {
+          if (file.endsWith('.wasm')) {
+              return 'amd64-debian-wasi.wasm';
+          }
+          return file;
+      },
+      env: {
+          wasi_snapshot_preview1: {
+              fd_write: (fd, iovs, iovs_len, nwritten) => {
+                  console.log('fd_write', fd, iovs, iovs_len, nwritten);
+                  return 0;
+              },
+              fd_seek: (fd, offset_low, offset_high, whence) => {
+                  console.log('fd_seek', fd, offset_low, offset_high, whence);
+                  return 0;
+              },
+              fd_close: (fd) => {
+                  console.log('fd_close', fd);
+                  return 0;
+              },
+          },
+      },
+  });
+
+  socket.addEventListener('open', () => {
+      wasm.setSocket(socket);
+  });
+</script>
 </body>
 
 </html>
